@@ -16,7 +16,7 @@ app = Client("EliteSultan", api_id=API_ID, api_hash=API_HASH, session_string=SES
 def sultan_ui(title, body):
     return (
         f"<b>╔════ {title} ════╗</b>\n"
-        f"<b>  💎 𝖲𝖳𝖠𝖳𝖴𝖲:</b> <code>𝖤𝖫𝖨𝖳𝖤 𝖴𝖲𝖤𝖱</code>\n"
+        f"<b>  💎 𝖲𝖳𝖠𝖳𝖴𝖲:</b> <code>RAY BAIK</code>\n"
         f"<b>  🛡 𝖲𝖤𝖢𝖴𝖱𝖨𝖳𝖸:</b> <code>𝖠𝖢𝖳𝖨𝖵𝖤</code>\n"
         f"<b>╚════════════════════╝</b>\n"
         f"<b>{body}</b>\n"
@@ -42,7 +42,7 @@ async def tagall_sultan(client, message):
         if not m.user.is_bot: members.append(m.user.mention)
     
     for i in range(0, len(members), 5):
-        await client.send_message(chat_id, f"⚡️ 𝖯𝖱𝖤𝖬𝖨𝖴𝖬 𝖠𝖭𝖭𝖮𝖴𝖢𝖤 ⚡️\n" + " ".join(members[i:i+5]))
+        await client.send_message(chat_id, f"⚡️ RAY 𝖠𝖭𝖭𝖮𝖴𝖢𝖤 ⚡️\n" + " ".join(members[i:i+5]))
         await asyncio.sleep(1)
 
 # --- 3. FITUR STEAL MEDIA (VIEW ONCE BYPASS) ---
@@ -84,3 +84,4 @@ async def self_destruct(_, message):
 
 print("Userbot Sultan is Running...")
 app.run()
+
