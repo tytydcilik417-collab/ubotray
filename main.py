@@ -18,14 +18,14 @@ def get_uptime():
     minutes, seconds = divmod(remainder, 60)
     return f"{hours}h {minutes}m {seconds}s"
 
-# --- 1. STATUS (ESTETIK QUOTE) ---
+# --- 1. STATUS (ESTETIK QUOTE PINK) ---
 @app.on_message(filters.command("status", ".") & filters.me)
 async def status_dash(_, message):
     start = datetime.now()
     ping = (datetime.now() - start).microseconds / 1000
-    # Menggunakan blockquote Telegram (estetik)
+    # Desain Quote Estetik
     res = (
-        f"**> 🌸 𝖤𝗅𝗂𝗍𝖾 𝖲𝗒𝗌𝗍𝖾𝗆 𝖮𝗇𝗅𝗂𝗇𝖾**\n"
+        f"**> 🌸 𝖤𝗅𝗂𝗍𝖾 𝖲𝗒𝗌𝗍𝖾𝗆 𝖠𝖼𝗍𝗂𝗏𝖾**\n"
         f"**>**\n"
         f"**> • 𝖯𝗂𝗇𝗀 :** `{ping}ms`\n"
         f"**> • 𝖴𝗉𝗍𝗂𝗆𝖾 :** `{get_uptime()}`\n"
@@ -39,21 +39,27 @@ async def status_dash(_, message):
 async def ghost_steal(client, message):
     reply = message.reply_to_message
     if not reply or not reply.media:
-        return await message.edit("`Balas ke medianya!`", delete_in=3)
+        await message.edit("`❌ Balas ke medianya!`")
+        await asyncio.sleep(3)
+        return await message.delete()
     
-    # Hapus pesan perintah kita biar target gak curiga
+    # Hapus jejak perintah
     await message.delete()
     
     try:
-        # Download secara paksa
+        # Proses Download
         file_path = await client.download_media(reply)
         
-        # Kirim ke Saved Messages (me)
-        caption = f"🌸 **𝖲𝗍𝖾𝖺𝗅 𝖱𝖾𝗌𝗎𝗅𝗍 (𝖵𝗂𝖾𝗐 𝖮𝗇𝖼𝖾 𝖡𝗒𝗉𝖺𝗌𝗌)**\n\n**> 𝖥𝗋𝗈𝗆 :** {reply.from_user.mention if reply.from_user else '𝖴𝗇𝗄𝗇𝗈𝗐𝗇'}\n**> 𝖢𝗁𝖺𝗍 :** `{message.chat.title or '𝖯𝗋𝗂𝗏𝖺𝗍𝖾'}`"
+        # Kirim ke Saved Messages
+        caption = (
+            f"🌸 **𝖲𝗍𝖾𝖺𝗅 𝖱𝖾𝗌𝗎𝗅𝗍**\n\n"
+            f"**> 𝖥𝗋𝗈𝗆 :** {reply.from_user.mention if reply.from_user else '𝖴𝗇𝗄𝗇𝗈𝗐𝗇'}\n"
+            f"**> 𝖢𝗁𝖺𝗍 :** `{message.chat.title or '𝖯𝗋𝗂𝗏𝖺𝗍𝖾'}`"
+        )
         
         await client.send_document("me", file_path, caption=caption)
         
-        # Hapus file sampah di server
+        # Bersihkan file sampah
         if os.path.exists(file_path):
             os.remove(file_path)
             
@@ -69,6 +75,7 @@ async def tagall_optimal(client, message):
     async for m in client.get_chat_members(message.chat.id):
         if not m.user.is_bot and not m.user.is_deleted:
             members.append(m.user.mention)
+    
     for i in range(0, len(members), 5):
         await client.send_message(message.chat.id, f"✨ {args}\n" + " ".join(members[i:i+5]))
         await asyncio.sleep(0.3)
@@ -77,12 +84,18 @@ async def tagall_optimal(client, message):
 @app.on_message(filters.command("sd", ".") & filters.me)
 async def sd_fix(_, message):
     if len(message.command) < 3:
-        return await message.edit("`Format: .sd [detik] [teks]`")
-    timer = int(message.command[1])
-    text = " ".join(message.command[2:])
-    await message.edit(f"**> 🕒 {timer}𝗌 : {text}**")
-    await asyncio.sleep(timer)
-    await message.delete()
+        await message.edit("`Format: .sd [detik] [teks]`")
+        await asyncio.sleep(3)
+        return await message.delete()
+        
+    try:
+        timer = int(message.command[1])
+        text = " ".join(message.command[2:])
+        await message.edit(f"**> 🕒 {timer}𝗌 : {text}**")
+        await asyncio.sleep(timer)
+        await message.delete()
+    except:
+        await message.delete()
 
-print("Elite-X V5: Ghost Mode Active!")
+print("Elite-X V6 is Live!")
 app.run()
