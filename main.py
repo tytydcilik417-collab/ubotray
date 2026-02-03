@@ -10,13 +10,16 @@ API_ID = int(os.environ.get("API_ID"))
 API_HASH = os.environ.get("API_HASH")
 SESSION = os.environ.get("SESSION")
 SUDO_USERS = [int(x) for x in os.environ.get("SUDO", "").split()] if os.environ.get("SUDO") else []
-LOG_GROUP = int(os.environ.get("LOG_GROUP", "0"))
+
+# Inisialisasi Database Sederhana untuk Trigger
+triggers = {}
 
 app = Client("EliteSultan", api_id=API_ID, api_hash=API_HASH, session_string=SESSION)
 start_time = time.time()
 
-# --- THEME ENGINE (ELITE HTML) ---
+# --- THEME ENGINE (FIXED HTML QUOTE) ---
 def elite_html(title, body):
+    # Menggunakan parse_mode=HTML adalah kunci kotak transparan
     return (
         f"<b>🌸 {title}</b>\n"
         f"<blockquote>{body}</blockquote>\n"
@@ -29,80 +32,67 @@ def get_uptime():
     minutes, seconds = divmod(remainder, 60)
     return f"{hours}h {minutes}m {seconds}s"
 
-# --- 1. INTERACTIVE HELP MENU ---
+# --- 1. MODUL TRIGGER (Fungsional) ---
+@app.on_message(filters.command("settrig", ".") & filters.me)
+async def set_trigger(_, message):
+    if len(message.command) < 3:
+        return await message.edit("<code>Format: .settrig [kata] [balasan]</code>")
+    key = message.command[1].lower()
+    val = " ".join(message.command[2:])
+    triggers[key] = val
+    await message.edit(elite_html("TRIGGER SET", f"Kata kunci <code>{key}</code> berhasil disimpan!"))
+
+@app.on_message(filters.text & ~filters.me & filters.group)
+async def trigger_handler(_, message):
+    text = message.text.lower()
+    if text in triggers:
+        await message.reply(triggers[text])
+
+# --- 2. STATUS (FULL QUOTE HTML) ---
+@app.on_message(filters.command("status", ".") & (filters.me | filters.user(SUDO_USERS)))
+async def status_dash(_, message):
+    start = datetime.now()
+    ping = (datetime.now() - start).microseconds / 1000
+    res = (
+        f"• <b>Ping :</b> <code>{ping}ms</code>\n"
+        f"• <b>Uptime :</b> <code>{get_uptime()}</code>\n"
+        f"• <b>Admin :</b> <code>{len(SUDO_USERS)}</code>\n"
+        f"• <b>Triggers :</b> <code>{len(triggers)}</code>"
+    )
+    # Pakai parse_mode HTML agar <blockquote> muncul
+    await message.edit(elite_html("ELITE SYSTEM", res), parse_mode=enums.ParseMode.HTML)
+
+# --- 3. HELP MENU (BUTTON INTERAKTIF) ---
 @app.on_message(filters.command("help", ".") & filters.me)
 async def help_menu(_, message):
     buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎯 Trigger", callback_data="mod_trig"), InlineKeyboardButton("🚀 G-Cast", callback_data="mod_gc")],
-        [InlineKeyboardButton("🛡 Admin", callback_data="mod_adm"), InlineKeyboardButton("👋 Welcome", callback_data="mod_wel")],
-        [InlineKeyboardButton("🛠 Main Features", callback_data="mod_main")]
+        [InlineKeyboardButton("🎯 Modul", callback_data="view_mods"), InlineKeyboardButton("🛠 Fitur", callback_data="view_feats")],
+        [InlineKeyboardButton("🏠 Menu Utama", callback_data="view_home")]
     ])
-    text = elite_html("MENU PENGATURAN", "Silakan pilih modul di bawah untuk melihat penjelasan detail.")
-    await message.edit(text, reply_markup=buttons)
+    await message.edit(elite_html("MENU PENGATURAN", "Klik tombol di bawah untuk akses modul."), reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
 
 @app.on_callback_query()
 async def callback_handler(_, query: CallbackQuery):
-    data = query.data
-    if data == "mod_trig":
-        txt = "<b>🎯 TRIGGER</b>\n<blockquote>Respon otomatis grup. Ketik <code>.settrig [kata] [balasan]</code></blockquote>"
-    elif data == "mod_gc":
-        txt = "<b>🚀 G-CAST / U-CAST</b>\n<blockquote>Broadcast massal ke Grup atau Private Chat.</blockquote>"
-    elif data == "mod_adm":
-        txt = "<b>🛡 ADMIN ACCESS</b>\n<blockquote>Tambah sudo via <code>.setadmin</code> (reply user).</blockquote>"
-    elif data == "mod_wel":
-        txt = "<b>👋 WELCOME</b>\n<blockquote>Teks sambutan otomatis member baru.</blockquote>"
-    elif data == "mod_main":
-        txt = "<b>🛠 MAIN FEATURES</b>\n<blockquote>• .status\n• .steal (Bypass ViewOnce)\n• .tagall\n• .sd (Self Destruct)</blockquote>"
+    if query.data == "view_mods":
+        txt = "<b>MODUL AKTIF:</b>\n1. <b>Trigger:</b> <code>.settrig</code>\n2. <b>Admin:</b> <code>.setadmin</code>\n3. <b>Gcast:</b> <code>.gcast</code>"
+    elif query.data == "view_feats":
+        txt = "<b>FITUR UTAMA:</b>\n• <code>.steal</code> (Maling Media)\n• <code>.tagall</code> (Tag Member)\n• <code>.sd</code> (Hapus Pesan)"
+    else:
+        txt = "Pilih modul sultan lo di bawah ini."
     
-    back = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Kembali", callback_data="mod_back")]])
-    await query.edit_message_text(elite_html("PENJELASAN MODUL", txt), reply_markup=back if data != "mod_back" else None)
-    if data == "mod_back":
-        await help_menu(None, query.message)
+    await query.edit_message_text(elite_html("DASHBOARD", txt), parse_mode=enums.ParseMode.HTML)
 
-# --- 2. FITUR STEAL (BYPASS VIEW ONCE) ---
+# --- 4. GHOST STEAL (VIEW ONCE) ---
 @app.on_message(filters.command("steal", ".") & filters.me)
 async def ghost_steal(client, message):
     reply = message.reply_to_message
     if not reply or not reply.media: return await message.delete()
     await message.delete()
     path = await client.download_media(reply)
-    cap = elite_html("STEAL RESULT", f"Ditarik dari: {reply.from_user.mention}")
-    await client.send_document("me", path, caption=cap)
+    await client.send_document("me", path, caption=elite_html("STEAL", f"From: {reply.from_user.first_name}"))
     if os.path.exists(path): os.remove(path)
 
-# --- 3. G-CAST & U-CAST ---
-@app.on_message(filters.command(["gcast", "ucast"], ".") & (filters.me | filters.user(SUDO_USERS)))
-async def broadcast_pro(client, message):
-    cmd = message.command[0]
-    text = message.reply_to_message.text if message.reply_to_message else " ".join(message.command[1:])
-    if not text: return await message.edit("<code>Pesan kosong!</code>")
-    await message.edit(f"<code>🚀 {cmd.upper()} Pro In Progress...</code>")
-    count = 0
-    target = [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP] if cmd == "gcast" else [enums.ChatType.PRIVATE]
-    async for dialog in client.get_dialogs():
-        if dialog.chat.type in target:
-            try:
-                await client.send_message(dialog.chat.id, text)
-                count += 1
-                await asyncio.sleep(0.3)
-            except: continue
-    await message.edit(elite_html(f"{cmd.upper()} DONE", f"Terkirim ke <code>{count}</code> chat."))
-
-# --- 4. STATUS & SUDO ---
-@app.on_message(filters.command("status", ".") & (filters.me | filters.user(SUDO_USERS)))
-async def status_dash(_, message):
-    start = datetime.now()
-    ping = (datetime.now() - start).microseconds / 1000
-    res = f"• <b>Ping :</b> <code>{ping}ms</code>\n• <b>Uptime :</b> <code>{get_uptime()}</code>\n• <b>Admin :</b> <code>{len(SUDO_USERS)}</code>"
-    await message.edit(elite_html("ELITE SYSTEM", res))
-
-@app.on_message(filters.command("setadmin", ".") & filters.me)
-async def add_sudo(_, message):
-    if not message.reply_to_message: return await message.edit("<code>Reply usernya!</code>")
-    SUDO_USERS.append(message.reply_to_message.from_user.id)
-    await message.edit(elite_html("ADMIN ADDED", f"User <code>{message.reply_to_message.from_user.id}</code> diizinkan."))
-
-# --- 5. TAGALL & SELF DESTRUCT ---
+# --- 5. TAGALL & SD ---
 @app.on_message(filters.command("tagall", ".") & filters.me)
 async def tag_all(client, message):
     note = " ".join(message.command[1:]) if len(message.command) > 1 else "Woi!"
@@ -114,8 +104,10 @@ async def tag_all(client, message):
 
 @app.on_message(filters.command("sd", ".") & filters.me)
 async def self_dest(client, message):
+    if len(message.command) < 3: return
     timer = int(message.command[1]); text = " ".join(message.command[2:])
-    await message.edit(elite_html("SELF DESTRUCT", f"🕒 {timer}s: {text}"))
+    await message.edit(elite_html("SELF DESTRUCT", f"🕒 {timer}s: {text}"), parse_mode=enums.ParseMode.HTML)
     await asyncio.sleep(timer); await message.delete()
 
+print("Elite-X V11 Ready!")
 app.run()
